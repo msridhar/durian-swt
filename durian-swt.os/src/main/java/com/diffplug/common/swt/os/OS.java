@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 DiffPlug
+ * Copyright (C) 2020-2021 DiffPlug
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,14 +26,14 @@ import java.util.Locale;
 
 /** Enum representing an OS and its underlying CPU architecture. */
 public enum OS {
-	WIN_x64, WIN_x86, LINUX_x64, LINUX_x86, MAC_x64, MAC_silicon;
+	WIN_x64, LINUX_x64, MAC_x64, MAC_silicon;
 
 	public boolean isWindows() {
-		return this == WIN_x64 || this == WIN_x86;
+		return this == WIN_x64;
 	}
 
 	public boolean isLinux() {
-		return this == LINUX_x64 || this == LINUX_x86;
+		return this == LINUX_x64;
 	}
 
 	public boolean isMac() {
@@ -64,9 +64,6 @@ public enum OS {
 		case LINUX_x64:
 		case MAC_x64:
 			return Arch.x64;
-		case WIN_x86:
-		case LINUX_x86:
-			return Arch.x86;
 		case MAC_silicon:
 			return Arch.arm64;
 		default:
@@ -81,7 +78,7 @@ public enum OS {
 
 	/** SWT-style x86/x86_64 */
 	public String arch() {
-		return getArch().x86x64arm64("x86", "x86_64", "aarch64");
+		return getArch().x64arm64("x86_64", "aarch64");
 	}
 
 	/** os().arch() */
@@ -91,7 +88,7 @@ public enum OS {
 
 	/** windowing.os.arch */
 	public String toSwt() {
-		return winMacLinux("win32", "cocoa", "gtk") + "." + winMacLinux("win32", "macosx", "linux") + "." + getArch().x86x64arm64("x86", "x86_64", "aarch64");
+		return winMacLinux("win32", "cocoa", "gtk") + "." + winMacLinux("win32", "macosx", "linux") + "." + getArch().x64arm64("x86_64", "aarch64");
 	}
 
 	/** Returns the native OS: 32-bit JVM on 64-bit Windows returns OS.WIN_64. */
@@ -116,13 +113,17 @@ public enum OS {
 			return exec("uname", "-a").contains("_ARM64_") ? MAC_silicon : MAC_x64;
 		} else if (isWin) {
 			boolean is64bit = System.getenv("ProgramFiles(x86)") != null;
-			return is64bit ? WIN_x64 : WIN_x86;
+			if (is64bit) {
+				return WIN_x64;
+			} else {
+				throw noLongerSupports32();
+			}
 		} else if (isLinux) {
 			String os_arch = System.getProperty("os.arch");
 			switch (os_arch) {
 			case "i386":
 			case "x86":
-				return LINUX_x86;
+				throw noLongerSupports32();
 			case "x86_64":
 			case "amd64":
 				return LINUX_x64;
@@ -159,9 +160,9 @@ public enum OS {
 	private static OS calculateRunning() {
 		Arch runningArch = runningJvm();
 		OS runningOs = NATIVE_OS.winMacLinux(
-				runningArch.x86x64arm64(OS.WIN_x86, OS.WIN_x64, null),
-				runningArch.x86x64arm64(null, OS.MAC_x64, OS.MAC_silicon),
-				runningArch.x86x64arm64(OS.LINUX_x86, OS.LINUX_x64, null));
+				runningArch.x64arm64(OS.WIN_x64, null),
+				runningArch.x64arm64(OS.MAC_x64, OS.MAC_silicon),
+				runningArch.x64arm64(OS.LINUX_x64, null));
 		if (runningOs == null) {
 			throw new IllegalArgumentException("Unsupported OS/Arch combo: " + runningOs + " " + runningArch);
 		}
@@ -173,12 +174,16 @@ public enum OS {
 		String sunArchDataModel = System.getProperty("sun.arch.data.model");
 		switch (sunArchDataModel) {
 		case "32":
-			return Arch.x86;
+			throw noLongerSupports32();
 		case "64":
 			return "aarch64".equals(System.getProperty("os.arch")) ? Arch.arm64 : Arch.x64;
 		default:
 			throw new IllegalArgumentException("Expcted 32 or 64, was " + sunArchDataModel);
 		}
+	}
+
+	private static IllegalArgumentException noLongerSupports32() {
+		return new IllegalArgumentException("32-bit no longer supported, 3.4.0 is last durian-swt.os to support 32-bit.");
 	}
 
 	/** Returns an UnsupportedOperationException for the given OS. */
