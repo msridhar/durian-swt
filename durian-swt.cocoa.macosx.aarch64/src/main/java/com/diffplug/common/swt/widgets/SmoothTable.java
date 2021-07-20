@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 DiffPlug
+ * Copyright (C) 2020-2021 DiffPlug
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,19 @@
 package com.diffplug.common.swt.widgets;
 
 
+import org.eclipse.swt.internal.cocoa.NSPoint;
 import org.eclipse.swt.widgets.Composite;
 
-public final class SmoothTable extends AbstractSmoothTable.Unscrollable {
+public final class SmoothTable extends AbstractSmoothTable.Scrollable {
 	public SmoothTable(Composite parent, int tableStyle) {
 		super(parent, tableStyle);
+	}
+
+	@Override
+	protected void setTopPixelWithinTable(int topPixel) {
+		NSPoint pt = new NSPoint();
+		pt.x = 0;
+		pt.y = topPixel;
+		table.view.scrollPoint(pt);
 	}
 }
