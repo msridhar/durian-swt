@@ -1,6 +1,10 @@
 # DurianSwt releases
 
 ## [Unreleased]
+### Added
+- Added `durian-swt.cocoa.macosx.aarch64` for SmoothTable to work on mac.
+### Removed
+- **BREAKING** Removed `Arch.x86`, which ripples through `OS` and `SwtPlatform`.
 
 ## [3.4.0] - 2021-07-17
 ### Added
